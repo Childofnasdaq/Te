@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Child of Nasdaq</title>
+
+    <!-- Font Awesome CDN -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+
+    <style>
+        /* Your existing CSS code here */
+    </style>
+</head>
+<body>
+    <div class="container" id="homeScreen">
+        <div class="bot-info">
+            <h2>CHILD OF NASDAQ</h2>
+            <img id="botImage" src="https://via.placeholder.com/300x200" alt="Bot Image">
+            <p>C.O.N-IBOT, 24/7 OPERATION</p>
+            <button onclick="document.getElementById('fileInput').click();">Upload Icon</button>
+            <input type="file" id="fileInput" class="hidden-upload" accept="image/*" onchange="loadImage(event)">
+        </div>
+
+        <div class="log-section">
+            <h3>Bot Logs</h3>
+            <ul id="logList"></ul>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn-trade" id="tradeButton" onclick="toggleTrade()">Start Trading</button>
+            <button class="btn-settings" onclick="navigateTo('settingsScreen')">Settings</button>
+        </div>
+    </div>
+
+    <div class="container hidden" id="connectScreen">
+        <h2>Connect MT4/MT5 Account</h2>
+        <form id="connectForm" onsubmit="connectToAccount(event)">
+            <!-- Your connect form here -->
+            <button type="submit" class="btn-connect">Connect</button>
+        </form>
+    </div>
+
+    <div class="container hidden" id="settingsScreen">
+        <!-- Your settings form here -->
+        <button onclick="saveSettings()">Save Settings</button>
+    </div>
+
+    <div class="nav-bar">
+        <!-- Your navigation bar code here -->
+    </div>
+
+    <script>
+        const apiToken = 'de1ULSf6tf769gc';
+        const apiUrl = 'https://api.deriv.com/v2';
+        const apiVersion = '1.0';
+
+        async function derivApiRequest(endpoint, params = {}) {
+            const headers = {
+                'Authorization': `Bearer ${apiToken}`,
+                'Content-Type': 'application/json',
+            };
+            const response = await fetch(`${apiUrl}/${endpoint}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(params),
+            });
+            return response.json();
+        }
+
+        async function getAccountInfo() {
+            const response = await derivApiRequest('balance');
+            if (response.balance) {
+                logMessage(`Account balance: ${response.balance}`);
+                return response.balance;
+            } else {
+                logMessage("Failed to fetch account balance");
+            }
+        }
+
+        async function openTrade(symbol, contractType, amount, duration) {
+            const params = {
+                symbol,
+                contract_type: contractType,
+                amount,
+                duration,
+                duration_unit: 'm', // minutes
+            };
+            const response = await derivApiRequest('open_contract', params);
+            if (response.contract_id) {
+                logMessage(`Trade opened with contract ID: ${response.contract_id}`);
+                return response.contract_id;
+            } else {
+                logMessage("Failed to open trade");
+            }
+        }
+
+        async function closeTrade(contractId) {
+            const params = { contract_id: contractId };
+            const response = await derivApiRequest('close_contract', params);
+            if (response.success) {
+                logMessage("Trade closed successfully");
+            } else {
+                logMessage("Failed to close trade");
+            }
+        }
+
+        function logMessage(message) {
+            const logList = document.getElementById('logList');
+            const logEntry = document.createElement('li');
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logList.appendChild(logEntry);
+            logList.scrollTop = logList.scrollHeight; // Auto-scroll to latest log
+        }
+
+        async function toggleTrade() {
+            const tradeButton = document.getElementById('tradeButton');
+            const isTrading = tradeButton.textContent.includes('Start');
+
+            if (isTrading) {
+                tradeButton.textContent = 'Stop Trading';
+                const balance = await getAccountInfo();
+
+                // Define trading parameters
+                const symbol = 'frxXAUUSD';
+                const contractType = 'PUT';
+                const amount = 10;
+                const duration = 5;
+
+                const contractId = await openTrade(symbol, contractType, amount, duration);
+
+                if (contractId) {
+                    setTimeout(async () => {
+                        await closeTrade(contractId);
+                    }, duration * 60000); // Close trade after duration (in ms)
+                }
+            } else {
+                tradeButton.textContent = 'Start Trading';
+                logMessage("Trading stopped.");
+            }
+        }
+
+        function loadImage(event) {
+            const image = document.getElementById('botImage');
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = e => image.src = e.target.result;
+            reader.readAsDataURL(file);
+        }
+
+        function connectToAccount(event) {
+            event.preventDefault();
+            logMessage("Connected to Account!");
+            navigateTo('homeScreen');
+        }
+
+        function saveSettings() {
+            alert('Settings saved!');
+        }
+
+        function navigateTo(screenId) {
+            const screens = document.querySelectorAll('.container');
+            screens.forEach(screen => screen.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        window.onload = () => navigateTo('homeScreen');
+    </script>
+</body>
+</html>
